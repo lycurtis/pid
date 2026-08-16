@@ -20,17 +20,19 @@ public:
   void set_gains(double kp, double ki, double kd);
 
 private:
+  // Tuning gains
   double kp_;
   double ki_;
   double kd_;
 
   // Controller state variable
   double integral_ = 0;
-  double prev_error_ = 0;
-  int sample_count_ = 0;
+  double prevError_ = 0;
+  int sampleCount_ = 0;
 
-  // Persistent controller state lives here. You decide what that is.
-  // Hint: anything you need from a *previous* call to update() is state.
+  // Physical system contraints
+  double maxOutput;
+  double minOutput;
 };
 
 }  // namespace pid_core

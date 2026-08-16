@@ -9,36 +9,52 @@ PidController::PidController(double kp, double ki, double kd)
 
 double PidController::update(double setpoint, double measurement, double dt)
 {
+  // Guard against dividing by 0 or invalid time.
+  if(dt <= 0.00){
+    return 0.0;
+  }
+  
+
   double error = setpoint - measurement; // e(t)
   
-  double p_term = kp_ * error;
+  double pTerm = kp_ * error;
 
   integral_ += error * dt;
-  double i_term = ki_ * integral_;
+  double iTerm = ki_ * integral_;
 
-  double d_term;
-  if(sample_count_ == 0 || dt <= 0){
-    d_term = 0;
+  double dTerm;
+  if(sampleCount_ == 0 || dt <= 0){
+    dTerm = 0;
   }
   else{
-    double derivative = (error - prev_error_) / dt;
-    d_term = kd_ * derivative;
+    double derivative = (error - prevError_) / dt;
+    dTerm = kd_ * derivative;
   }
 
-  double u = p_term + i_term + d_term; // u(t) or control output
+  double uOutput = pTerm + iTerm + dTerm; // u(t) or control output
 
-  // updating state variables
-  prev_error_ = error;
-  sample_count_++;
+  // Clamping output u(t) to match physical hardware limits + Antiwindup
+  if(uOutput > maxOutput){
+    uOutput = maxOutput;
+    integral -= error * dt; // prevent integral accumulation during saturation
+  }
+  else if(uOutput < minOutput){
+    uOutput = minOutput;
+    itnegral -= error * dt; // prevent integral accumulation during saturation
+  }
 
-  return u;
+  // updating state variables for next update() loop
+  prevError_ = error;
+  sampleCount_++;
+
+  return uOutput;
 }
 
 void PidController::reset()
 {
   integral_ = 0;
-  prev_error_ = 0;
-  sample_count_ = 0;
+  prevError_ = 0;
+  sampleCount_ = 0;
 }
 
 void PidController::set_gains(double kp, double ki, double kd)
