@@ -2,11 +2,8 @@
 
 namespace pid_core {
 
-// Pure C++ PID. No ROS types in this header — that's the whole point of
-// splitting pid_core from pid_ros.
-//
-// You own the math. This is just the shape of the class so the library
-// compiles and tests can link against it.
+// Pure C++ PID
+
 class PidController {
 public:
   PidController(double kp, double ki, double kd);
@@ -26,6 +23,11 @@ private:
   double kp_;
   double ki_;
   double kd_;
+
+  // Controller state variable
+  double integral_ = 0;
+  double prev_error_ = 0;
+  int sample_count_ = 0;
 
   // Persistent controller state lives here. You decide what that is.
   // Hint: anything you need from a *previous* call to update() is state.
