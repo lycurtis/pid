@@ -31,8 +31,8 @@ private:
   int sampleCount_ = 0;
 
   // Physical system contraints
-  double maxOutput;
-  double minOutput;
+  double maxOutput = 100; // Placeholder
+  double minOutput = 0; // Placeholder
 };
 
 }  // namespace pid_core

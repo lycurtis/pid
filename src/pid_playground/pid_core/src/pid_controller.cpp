@@ -1,5 +1,6 @@
 #include "pid_core/pid_controller.hpp"
-
+#include <stdlib.h>
+#include <iostream>
 namespace pid_core {
 
 PidController::PidController(double kp, double ki, double kd)
@@ -28,7 +29,12 @@ double PidController::update(double setpoint, double measurement, double dt)
   }
   else{
     double derivative = (error - prevError_) / dt;
-    dTerm = kd_ * derivative;
+    dTerm = kd_ * derivative; // FUTURE TODO: apply a first-order low-pass filter (filtered D)
+    /*
+    For now keep raw D only as a temporary learning form
+    When you add plant noise later, write a test or a PlotJuggler run that compares unfiltered 
+    vs filtered D on the same noisy /state. That will teach you more than any formula dump.
+     */
   }
 
   double uOutput = pTerm + iTerm + dTerm; // u(t) or control output
@@ -36,11 +42,11 @@ double PidController::update(double setpoint, double measurement, double dt)
   // Clamping output u(t) to match physical hardware limits + Antiwindup
   if(uOutput > maxOutput){
     uOutput = maxOutput;
-    integral -= error * dt; // prevent integral accumulation during saturation
+    integral_ -= error * dt; // prevent integral accumulation during saturation
   }
   else if(uOutput < minOutput){
     uOutput = minOutput;
-    itnegral -= error * dt; // prevent integral accumulation during saturation
+    integral_ -= error * dt; // prevent integral accumulation during saturation
   }
 
   // updating state variables for next update() loop
