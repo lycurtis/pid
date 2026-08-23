@@ -72,3 +72,24 @@ TEST(PidController, TestReset)
   pid.reset();
   EXPECT_EQ(pid.update(3.0, 1.0, 0.01), 4.04);
 }
+
+TEST(PidController, TestWindup)
+{
+  double kp = 0.0;
+  double ki = 2.0;
+  double kd = 0.0;
+  pid_core::PidController pid(kp, ki, kd);
+  pid.set_output_limits(0, 100);
+  // Phase 1: stay at the ceiling long enough that integral would wind up without
+  // anti-windup (only clipping u is not enough).
+  double u = 0.0;
+  for (int i = 0; i < 5000; ++i) {
+    u = pid.update(3.0, 1.0, 0.01);  // error = +2
+  }
+  EXPECT_DOUBLE_EQ(u, 100.0);
+
+  // Phase 2: overshoot (error < 0). Capped integral lets u come off the rail.
+  // Without anti-windup, I would still be huge and u would stay at 100.
+  u = pid.update(1.0, 3.0, 0.01);  // error = -2
+  EXPECT_LT(u, 100.0);
+}
