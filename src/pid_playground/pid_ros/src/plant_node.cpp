@@ -83,7 +83,7 @@ class PlantNode : public rclcpp::Node{
     public:
     // Create constructor
     PlantNode() 
-    : Node("plant_node"), count_(0){
+    : Node("plant_node"){
         // Create publisher and its corresponding callback
         publisher_ = this->create_publisher<std_msgs::msg::Float64>("state", 10);
         timer_ = this->create_wall_timer(std::chrono::milliseconds(100), std::bind(&PlantNode::timer_callback, this));
@@ -95,7 +95,6 @@ class PlantNode : public rclcpp::Node{
 
     private:
         void timer_callback(){ // publishes state information
-            auto message = std_msgs::msg::Float64();
             /*
             Newton's 2nd Law with linear drag:
                 - Newton's 2nd Law: 
@@ -110,13 +109,23 @@ class PlantNode : public rclcpp::Node{
                     -- drag scales with how fast we're moving thus scaled by velocity (v)
                     -- The negative sign (-) means that it always opposes motion which makes sense for drag
             */
+            rclcpp::Time now = this->get_clock()->now();
+
+            auto message = std_msgs::msg::Float64();
+
             double a = (effort_ / m_) - b_*v_;
-            double dt = 0.01;
-            v_ += a*dt; // update v_ 
-            x_ += v_*dt; // update x_
+            // Skip integration on first timer tick (when now == last_time_)
+            if(now != last_time_){ 
+                double dt = (now - last_time_).seconds();
+                v_ += a*dt; // update v_ (integrate)
+                x_ += v_*dt; // update x_ (integrate)
+            }
             message.data = x_;
+
             RCLCPP_INFO(this->get_logger(), "Publishing: %.3f", message.data);
             publisher_->publish(message);
+
+            last_time_ = now;
         }
 
         void topic_callback(const std_msgs::msg::Float64 & msg) { //  Subscribes to /effort
@@ -128,7 +137,7 @@ class PlantNode : public rclcpp::Node{
 
         rclcpp::TimerBase::SharedPtr timer_;
         rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr publisher_;
-        size_t count_;
+        rclcpp::Time last_time_ = this->get_clock()->now();
         // physical model member functions
         double x_ = 0; // position
         double v_ = 0; // velocity
