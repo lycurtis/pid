@@ -20,15 +20,15 @@ target_include_directories(plant_node PRIVATE include)
 target_compile_features(plant_node PUBLIC cxx_std_17)
 ament_target_dependencies(plant_node rclcpp std_msgs)
 
-# add_executable(setpoint_node src/setpoint_node.cpp)
-# target_include_directories(setpoint_node PRIVATE include)
-# target_compile_features(setpoint_node PUBLIC cxx_std_17)
-# ament_target_dependencies(setpoint_node rclcpp std_msgs)
+add_executable(setpoint_node src/setpoint_node.cpp)
+target_include_directories(setpoint_node PRIVATE include)
+target_compile_features(setpoint_node PUBLIC cxx_std_17)
+ament_target_dependencies(setpoint_node rclcpp std_msgs)
 
 install(TARGETS
   # pid_node
   plant_node
-  # setpoint_node
+  setpoint_node
   DESTINATION lib/${PROJECT_NAME})
 
 ament_package()
