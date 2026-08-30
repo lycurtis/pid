@@ -23,6 +23,9 @@ The goal of plant_node
 
 colcon build --symlink-install --packages-select pid_ros --allow-overriding pid_core
 
+ros2 topic pub /effort std_msgs/msg/Float64 "{data: 1.0}" --rate 10
+ros2 topic echo /state
+
 Resources
 https://medium.com/@zakerima/setting-up-subscribers-in-ros2-control-lambda-vs-member-function-9bf06f7caa39
 */
@@ -83,7 +86,7 @@ class PlantNode : public rclcpp::Node{
     public:
     // Create constructor
     PlantNode() 
-    : Node("plant_node"){
+    : Node("plant_node"), tick_count_(0){
         // Create publisher and its corresponding callback
         publisher_ = this->create_publisher<std_msgs::msg::Float64>("state", 10);
         timer_ = this->create_wall_timer(std::chrono::milliseconds(100), std::bind(&PlantNode::timer_callback, this));
@@ -109,20 +112,24 @@ class PlantNode : public rclcpp::Node{
                     -- drag scales with how fast we're moving thus scaled by velocity (v)
                     -- The negative sign (-) means that it always opposes motion which makes sense for drag
             */
+            tick_count_++;
             rclcpp::Time now = this->get_clock()->now();
 
             auto message = std_msgs::msg::Float64();
 
             double a = (effort_ / m_) - b_*v_;
             // Skip integration on first timer tick (when now == last_time_)
-            if(now != last_time_){ 
+            if(tick_count_ > 1){ 
                 double dt = (now - last_time_).seconds();
+                // RCLCPP_INFO(this->get_logger(), "dt: %.3f", dt);
                 v_ += a*dt; // update v_ (integrate)
                 x_ += v_*dt; // update x_ (integrate)
             }
             message.data = x_;
 
-            RCLCPP_INFO(this->get_logger(), "Publishing: %.3f", message.data);
+            if(tick_count_ % 10 == 0){ // throttle log message to every 10th run
+                RCLCPP_INFO(this->get_logger(), "Publishing: %.3f", message.data);
+            }
             publisher_->publish(message);
 
             last_time_ = now;
@@ -137,6 +144,7 @@ class PlantNode : public rclcpp::Node{
 
         rclcpp::TimerBase::SharedPtr timer_;
         rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr publisher_;
+        size_t tick_count_;
         rclcpp::Time last_time_ = this->get_clock()->now();
         // physical model member functions
         double x_ = 0; // position
@@ -145,7 +153,7 @@ class PlantNode : public rclcpp::Node{
         double b_ = 0.1; // damping
 
         rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr subscription_;
-        double effort_;
+        double effort_ = 0.0;
 };
 
 int main(int argc, char* argv[]){
