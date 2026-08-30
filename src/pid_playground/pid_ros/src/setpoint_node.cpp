@@ -1,5 +1,5 @@
 /*
-Publish a desired position on /setpoint (std_msgs/msgs/Float64)
+Publish a desired position on /setpoint (std_msgs/msg/Float64)
 
 Building
 colcon build --symlink-install --packages-select pid_ros --allow-overriding pid_core
