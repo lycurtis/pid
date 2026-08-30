@@ -7,6 +7,12 @@ ROS2 nodes wrapping pid_core
 
 ## Commands
 
+### Building
+
+```bash
+colcon build --symlink-install --packages-select pid_ros --allow-overriding pid_core
+```
+
 ### Running
 ros2 run <package_name> <executable_name>
 
