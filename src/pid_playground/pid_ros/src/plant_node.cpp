@@ -94,17 +94,34 @@ class PlantNode : public rclcpp::Node{
     }
 
     private:
-        void timer_callback(){
+        void timer_callback(){ // publishes state information
             auto message = std_msgs::msg::Float64();
-            message.data = 0.0 + count_++;
-            RCLCPP_INFO(this->get_logger(), "Publishing: %.1f", message.data);
+            /*
+            Newton's 2nd Law with linear drag:
+                - Newton's 2nd Law: 
+                    F = ma
+                - Solve for acceleration:
+                    a = F/m
+                - Apply linear drag
+                    a = F/m - b*v
+            NOTES:
+                - F is the applied Force in other words it is the "effort variable"
+                - The -b*v term is viscious damping 
+                    -- drag scales with how fast we're moving thus scaled by velocity (v)
+                    -- The negative sign (-) means that it always opposes motion which makes sense for drag
+            */
+            double a = (effort_ / m_) - b_*v_;
+            double dt = 0.01;
+            v_ += a*dt; // update v_ 
+            x_ += v_*dt; // update x_
+            message.data = x_;
+            RCLCPP_INFO(this->get_logger(), "Publishing: %.3f", message.data);
             publisher_->publish(message);
         }
 
-        void topic_callback(const std_msgs::msg::Float64 & msg) {
-            RCLCPP_INFO(this->get_logger(), "I hear: %.1f", msg.data);
+        void topic_callback(const std_msgs::msg::Float64 & msg) { //  Subscribes to /effort
             if(msg.data != effort_){ // optional log when effort changes
-                RCLCPP_INFO(this->get_logger(), "Effort Changed: %.1f", msg.data);
+                RCLCPP_INFO(this->get_logger(), "Updated Effort: %.3f", msg.data);
             }
             effort_ = msg.data;
         }
@@ -112,6 +129,11 @@ class PlantNode : public rclcpp::Node{
         rclcpp::TimerBase::SharedPtr timer_;
         rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr publisher_;
         size_t count_;
+        // physical model member functions
+        double x_ = 0; // position
+        double v_ = 0; // velocity
+        double m_ = 1.0; // mass
+        double b_ = 0.1; // damping
 
         rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr subscription_;
         double effort_;
@@ -123,5 +145,6 @@ int main(int argc, char* argv[]){
     // rclcpp::spin(std::make_shared<StatePublisher>());
     // rclcpp::spin(std::make_shared<EffortSubscriber>());
     rclcpp::spin(std::make_shared<PlantNode>());
+
     return 0;
 }
